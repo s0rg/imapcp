@@ -61,10 +61,9 @@ class ImapBox(object):
 
         for response_part in result:
             if isinstance(response_part, tuple):
-                msg = message_from_string(response_part[1])
-                break
-
-        return msg
+                return message_from_string(response_part[1])
+        else:
+            return None
 
     def copy(self, to, mbox_name=None, do_move=False):
         if mbox_name is not None:
@@ -77,7 +76,8 @@ class ImapBox(object):
         msgs = self.get_message(mbox)
         for msg in msgs:
             mail = self.get_message(mbox, msg)
-            to.add_message(mbox, mail)
+            if mail is not None:
+                to.add_message(mbox, mail)
 
         if move:
             self._conn.store(','.join(msgs):, '+FLAGS', r'(\Deleted)')
@@ -86,11 +86,13 @@ class ImapBox(object):
         print '{} messages {} from {}'.format(len(msgs), 'moved' if move else 'copied' , mbox)
 
     def add_message(self, mailbox, msg):
-        self._conn.create(mailbox)
+        if mailbox not in self._mailboxes:
+            self._conn.create(mailbox)
 
         date = time() if 'date' not in msg \
                       else parsedate(msg['date'])
         self._conn.append(mailbox, '', imaplib.Time2Internaldate(date), str(msg))
+
 
     def close(self):
         self._conn.close()
@@ -112,7 +114,7 @@ def imap_connect(uri_str):
 
     if uri.username is None:
         print '[-] No username found in %s!' % uri_str
-        return
+        return None
 
     password = uri.password if uri.password is not None \
                             else getpass(prompt='password for %s: ' % uri.username)
@@ -128,7 +130,12 @@ def main(args):
 
     src = imap_connect(opt.uri_source)
     dst = imap_connect(opt.uri_dest)
+
+    if None in (src, dst):
+        return 1
+
     src.copy(dst, opt.mailbox, opt.do_move)
+
     src.close()
     dst.close()
 
