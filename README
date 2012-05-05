@@ -1,0 +1,12 @@
+IMAP4 mailbox copy tool
+
+Usage:
+imapcp.py [--move] [--box name] uri_source uri_dest
+
+--move                - move instead of copy
+--box name            - copy/move only box named 'name', else - copy all boxes
+uri_source / uri_dest - URI: user[:password@host:port]
+    if password omitted it will be prompted,
+    if host omitted - 'localhost' used
+    if port omitted - default IMAP4 port (143) used
+
