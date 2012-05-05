@@ -78,6 +78,11 @@ class ImapBox(object):
         for msg in msgs:
             mail = self.get_message(mbox, msg)
             to.add_message(mbox, mail)
+
+        if move:
+            self._conn.store(','.join(msgs):, '+FLAGS', r'(\Deleted)')
+            self._conn.expunge()
+
         print '{} messages {} from {}'.format(len(msgs), 'moved' if move else 'copied' , mbox)
 
     def add_message(self, mailbox, msg):
