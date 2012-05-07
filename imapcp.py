@@ -8,11 +8,43 @@ import sys
 import re
 import imaplib
 from time import time
-from argparse import ArgumentParser
+#from argparse import ArgumentParser
+#from optparse import OptionParser
 from email import message_from_string
 from email.utils import parsedate
 from getpass import getpass
 from urlparse import urlsplit
+
+try:
+    from argparse import ArgumentParser
+
+    def parse_args(args):
+        parser = ArgumentParser(description=__program__)
+        parser.add_argument('-v', '--version', action='version', version=__version__)
+        parser.add_argument('--move', action='store_true', dest='do_move', help='perform "move" (clear source) instead of copy', default=False)
+        parser.add_argument('--box', action='store', dest='mailbox', help='copy/move only this mailbox (default - all)', default=None)
+        parser.add_argument('uri_source', action='store', help='Source ( user[:password@localhost:143] )')
+        parser.add_argument('uri_dest', action='store', help='Destination ( user[:password@localhost:143] )')
+        return parser.parse_args(args)
+
+except ImportError, _:
+    from optparse import OptionParser
+
+    class OptHack(object):
+        def __init__(self, **kwargs):
+            for k, w in kwargs.iteritems():
+                self.__setattr__(k, w)
+
+    def parse_args(args):
+        parser = OptionParser()
+        parser.add_option('--move', action='store_true', dest='do_move', default=False)
+        parser.add_option('--box', action='store', dest='mailbox', default=None)
+        opts, rem = parser.parse_args(args)
+        if len(rem) != 2:
+            print 'Bad Command Line!'
+            sys.exit(1)
+
+        return OptHack(do_move = opts.do_move, mailbox = opts.mailbox, uri_source = rem[0], uri_dest = rem[1])
 
 '''
 Code for parse_list_response taken here:
@@ -97,16 +129,6 @@ class ImapBox(object):
     def close(self):
         self._conn.close()
         self._conn.logout()
-
-
-def parse_args(args):
-    parser = ArgumentParser(description=__program__)
-    parser.add_argument('-v', '--version', action='version', version=__version__)
-    parser.add_argument('--move', action='store_true', dest='do_move', help='perform "move" (clear source) instead of copy', default=False)
-    parser.add_argument('--box', action='store', dest='mailbox', help='copy/move only this mailbox (default - all)', default=None)
-    parser.add_argument('uri_source', action='store', help='Source ( user[:password@localhost:143] )')
-    parser.add_argument('uri_dest', action='store', help='Destination ( user[:password@localhost:143] )')
-    return parser.parse_args(args)
 
 
 def imap_connect(uri_str):
