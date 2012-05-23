@@ -156,7 +156,8 @@ def imap_connect(uri_str):
     host = uri.hostname if uri.hostname is not None else 'localhost'
     port = uri.port if uri.port is not None else imaplib.IMAP4_PORT
 
-    print 'User: {} Password: {} Host: {} Port: {}'.format(uri.username, password, host, port)
+    #For Debug
+    #print 'User: {} Password: {} Host: {} Port: {}'.format(uri.username, password, host, port)
 
     return ImapBox(uri.username, password, host, port)
 
