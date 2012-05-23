@@ -2,14 +2,13 @@
 #-*- coding: utf8 -*-
 
 __program__ = "IMAP4 mailbox copy tool"
-__version__ = "0.4"
+__author__ = "s0rg"
+__version__ = "0.6"
 
 import sys
 import re
 import imaplib
 from time import time
-#from argparse import ArgumentParser
-#from optparse import OptionParser
 from email import message_from_string
 from email.utils import parsedate
 from getpass import getpass
@@ -44,7 +43,8 @@ except ImportError, _:
             print 'Bad Command Line!'
             sys.exit(1)
 
-        return OptHack(do_move = opts.do_move, mailbox = opts.mailbox, uri_source = rem[0], uri_dest = rem[1])
+        return OptHack(do_move=opts.do_move, mailbox=opts.mailbox, uri_source=rem[0], uri_dest=rem[1])
+
 
 '''
 Code for parse_list_response taken here:
@@ -60,18 +60,28 @@ def parse_list_response(line):
 
 class ImapBox(object):
     def __init__(self, login, password, host, port):
+        self._mailboxes = {}
+
         self._conn = imaplib.IMAP4(host, port)
-        self._conn.login(login, password)
+        try:
+            self._conn.login(login, password)
+        except imaplib.error:
+            print 'Login attempt failed for: {}'.format(login)
+            raise
+
         self._scan_mailboxes()
 
     def _scan_mailboxes(self):
-        self._mailboxes = {}
         typ, mailbox_data = self._conn.list()
+        if typ != 'OK':
+            return
+
         for line in mailbox_data:
             flags, delimiter, mailbox_name = parse_list_response(line)
             self._conn.select(mailbox_name, readonly=True)
             typ, [msg_ids] = self._conn.search(None, 'ALL')
-            self._mailboxes[mailbox_name] = msg_ids.split()
+            if typ == 'OK':
+                self._mailboxes[mailbox_name] = msg_ids.split()
 
     def get_mailboxes(self):
         return self._mailboxes.keys()
@@ -125,14 +135,16 @@ class ImapBox(object):
                       else parsedate(msg['date'])
         self._conn.append(mailbox, '', imaplib.Time2Internaldate(date), str(msg))
 
-
     def close(self):
         self._conn.close()
         self._conn.logout()
 
 
 def imap_connect(uri_str):
-    uri = urlsplit('//' + uri_str, scheme='')
+    if not uri_str.startswith('imap://')
+        uri = urlsplit('//' + uri_str, scheme='imap')
+    else:
+        uri = urlsplit(uri_str)
 
     if uri.username is None:
         print '[-] No username found in %s!' % uri_str
@@ -143,6 +155,8 @@ def imap_connect(uri_str):
 
     host = uri.hostname if uri.hostname is not None else 'localhost'
     port = uri.port if uri.port is not None else imaplib.IMAP4_PORT
+
+    print 'User: {} Password: {} Host: {} Port: {}'.format(uri.username, password, host, port)
 
     return ImapBox(uri.username, password, host, port)
 
