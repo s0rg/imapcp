@@ -131,8 +131,11 @@ class ImapBox(object):
         if mailbox not in self._mailboxes:
             self._conn.create(mailbox)
 
-        date = time() if 'date' not in msg \
-                      else parsedate(msg['date'])
+        date = time()
+        if 'date' in msg:
+            d = parsedate(msg['date'])
+            if d is not None:
+                date = d
         self._conn.append(mailbox, '', imaplib.Time2Internaldate(date), str(msg))
 
     def close(self):
@@ -141,7 +144,7 @@ class ImapBox(object):
 
 
 def imap_connect(uri_str):
-    if not uri_str.startswith('imap://')
+    if not uri_str.startswith('imap://'):
         uri = urlsplit('//' + uri_str, scheme='imap')
     else:
         uri = urlsplit(uri_str)
