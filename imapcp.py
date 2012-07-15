@@ -136,7 +136,12 @@ class ImapBox(object):
             d = parsedate(msg['date'])
             if d is not None:
                 date = d
-        self._conn.append(mailbox, '', imaplib.Time2Internaldate(date), str(msg))
+        try:
+            date = imaplib.Time2Internaldate(date)
+        except ValueError:
+            date = imaplib.Time2Internaldate(time())
+
+        self._conn.append(mailbox, '', date, str(msg))
 
     def close(self):
         self._conn.close()
