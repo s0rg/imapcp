@@ -75,7 +75,7 @@ class ImapBox(object):
     def connect(self):
         if self._is_ssl:
             self._conn = imaplib.IMAP4_SSL(self._host, self._port)
-            self._conn.ssl().ssl_version = ssl.PROTOCOL_SSLv3
+            self._conn.ssl().ssl_version = ssl.PROTOCOL_TLSv1
         else:
             self._conn = imaplib.IMAP4(self._host, self._port)
 
