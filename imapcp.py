@@ -7,6 +7,7 @@ __version__ = "0.7"
 
 import sys
 import re
+import ssl
 import imaplib
 from time import time
 from email import message_from_string
@@ -74,6 +75,7 @@ class ImapBox(object):
     def connect(self):
         if self._is_ssl:
             self._conn = imaplib.IMAP4_SSL(self._host, self._port)
+            self._conn.ssl().ssl_version = ssl.PROTOCOL_SSLv3
         else:
             self._conn = imaplib.IMAP4(self._host, self._port)
 
