@@ -182,8 +182,8 @@ def imap_connect(uri_str, is_ssl=False):
 def main(args):
     opt = parse_args(args[1:])
 
-    src = imap_connect(opt.uri_source)
-    dst = imap_connect(opt.uri_dest)
+    src = imap_connect(opt.uri_source, opt.is_ssl)
+    dst = imap_connect(opt.uri_dest, opt.is_ssl)
 
     if None in (src, dst):
         return 1
