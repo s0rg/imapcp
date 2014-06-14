@@ -3,7 +3,7 @@
 
 __program__ = "IMAP4 mailbox copy tool"
 __author__ = "s0rg"
-__version__ = "0.6"
+__version__ = "0.7"
 
 import sys
 import re
@@ -14,6 +14,7 @@ from email.utils import parsedate
 from getpass import getpass
 from urlparse import urlsplit
 
+
 try:
     from argparse import ArgumentParser
 
@@ -22,6 +23,7 @@ try:
         parser.add_argument('-v', '--version', action='version', version=__version__)
         parser.add_argument('--move', action='store_true', dest='do_move', help='perform "move" (clear source) instead of copy', default=False)
         parser.add_argument('--box', action='store', dest='mailbox', help='copy/move only this mailbox (default - all)', default=None)
+        parser.add_argument('--ssl', action='store', dest='is_ssl', help='copy/move only this mailbox (default - all)', default=False)
         parser.add_argument('uri_source', action='store', help='Source ( user[:password@localhost:143] )')
         parser.add_argument('uri_dest', action='store', help='Destination ( user[:password@localhost:143] )')
         return parser.parse_args(args)
@@ -38,52 +40,59 @@ except ImportError, _:
         parser = OptionParser()
         parser.add_option('--move', action='store_true', dest='do_move', default=False)
         parser.add_option('--box', action='store', dest='mailbox', default=None)
+        parser.add_option('--ssl', action='store', dest='is_ssl', default=False)
+
         opts, rem = parser.parse_args(args)
         if len(rem) != 2:
             print 'Bad Command Line!'
             sys.exit(1)
 
-        return OptHack(do_move=opts.do_move, mailbox=opts.mailbox, uri_source=rem[0], uri_dest=rem[1])
+        return OptHack(do_move=opts.do_move, mailbox=opts.mailbox, uri_source=rem[0], uri_dest=rem[1], is_ssl=opts.is_ssl)
 
 
 '''
 Code for parse_list_response taken here:
 http://www.doughellmann.com/PyMOTW/imaplib/index.html
 '''
-list_response_pattern = re.compile(r'\((?P<flags>.*?)\) "(?P<delimiter>.*)" (?P<name>.*)')
+IMAP_LIST_RESPONSE_RE = re.compile(r'\((?P<flags>.*?)\) "(?P<delimiter>.*)" (?P<name>.*)')
 
 def parse_list_response(line):
-    flags, delimiter, mailbox_name = list_response_pattern.match(line).groups()
+    flags, delimiter, mailbox_name = IMAP_LIST_RESPONSE_RE.match(line).groups()
     mailbox_name = mailbox_name.strip('"')
     return (flags, delimiter, mailbox_name)
 
 
 class ImapBox(object):
-    def __init__(self, login, password, host, port):
+    def __init__(self, login, password, host, port, ssl=False):
         self._mailboxes = {}
+        self._login = login
+        self._password = password
+        self._host = host
+        self._port = port
+        self._is_ssl = ssl
 
-        self._conn = imaplib.IMAP4(host, port)
-        try:
-            self._conn.login(login, password)
-        except imaplib.error:
-            print 'Login attempt failed for: {}'.format(login)
-            raise
+    def connect(self):
+        if self._is_ssl:
+            self._conn = imaplib.IMAP4_SSL(host, port)
+        else:
+            self._conn = imaplib.IMAP4(host, port)
 
-        self._scan_mailboxes()
+        self._conn.login(login, password)
 
-    def _scan_mailboxes(self):
-        typ, mailbox_data = self._conn.list()
+        typ, res = self._conn.list()
         if typ != 'OK':
-            return
+            raise Exception('IMAP "list" command failed!')
 
-        for line in mailbox_data:
-            flags, delimiter, mailbox_name = parse_list_response(line)
+        for ln in res:
+            flags, delimiter, mailbox_name = parse_list_response(ln)
             self._conn.select(mailbox_name, readonly=True)
             typ, [msg_ids] = self._conn.search(None, 'ALL')
             if typ == 'OK':
                 self._mailboxes[mailbox_name] = msg_ids.split()
 
-    def get_mailboxes(self):
+        return self
+
+    def get_boxes(self):
         return self._mailboxes.keys()
 
     def get_message(self, mailbox, msg_id=None):
@@ -148,7 +157,7 @@ class ImapBox(object):
         self._conn.logout()
 
 
-def imap_connect(uri_str):
+def imap_connect(uri_str, is_ssl=False):
     if not uri_str.startswith('imap://'):
         uri = urlsplit('//' + uri_str, scheme='imap')
     else:
@@ -161,13 +170,13 @@ def imap_connect(uri_str):
     password = uri.password if uri.password is not None \
                             else getpass(prompt='password for %s: ' % uri.username)
 
-    host = uri.hostname if uri.hostname is not None else 'localhost'
-    port = uri.port if uri.port is not None else imaplib.IMAP4_PORT
+    host = uri.hostname or 'localhost'
+    port = uri.port or imaplib.IMAP4_PORT
 
     #For Debug
     #print 'User: {} Password: {} Host: {} Port: {}'.format(uri.username, password, host, port)
 
-    return ImapBox(uri.username, password, host, port)
+    return ImapBox(uri.username, password, host, port, is_ssl).connext()
 
 
 def main(args):
@@ -185,6 +194,7 @@ def main(args):
     dst.close()
 
     return 0
+
 
 ##### entry point ######
 sys.exit(main(sys.argv))
