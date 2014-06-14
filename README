@@ -5,6 +5,7 @@ imapcp.py [--move] [--box name] uri_source uri_dest
 
 --move                - move instead of copy
 --box name            - copy/move only box named 'name', else - copy all boxes
+--ssl                 - use ssl
 uri_source / uri_dest - URI: user[:password@host:port]
     if password omitted it will be prompted,
     if host omitted - 'localhost' used
