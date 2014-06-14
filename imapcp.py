@@ -23,7 +23,7 @@ try:
         parser.add_argument('-v', '--version', action='version', version=__version__)
         parser.add_argument('--move', action='store_true', dest='do_move', help='perform "move" (clear source) instead of copy', default=False)
         parser.add_argument('--box', action='store', dest='mailbox', help='copy/move only this mailbox (default - all)', default=None)
-        parser.add_argument('--ssl', action='store', dest='is_ssl', help='copy/move only this mailbox (default - all)', default=False)
+        parser.add_argument('--ssl', action='store_true', dest='is_ssl', help='copy/move only this mailbox (default - all)', default=False)
         parser.add_argument('uri_source', action='store', help='Source ( user[:password@localhost:143] )')
         parser.add_argument('uri_dest', action='store', help='Destination ( user[:password@localhost:143] )')
         return parser.parse_args(args)
@@ -40,7 +40,7 @@ except ImportError, _:
         parser = OptionParser()
         parser.add_option('--move', action='store_true', dest='do_move', default=False)
         parser.add_option('--box', action='store', dest='mailbox', default=None)
-        parser.add_option('--ssl', action='store', dest='is_ssl', default=False)
+        parser.add_option('--ssl', action='store_true', dest='is_ssl', default=False)
 
         opts, rem = parser.parse_args(args)
         if len(rem) != 2:
@@ -73,11 +73,11 @@ class ImapBox(object):
 
     def connect(self):
         if self._is_ssl:
-            self._conn = imaplib.IMAP4_SSL(host, port)
+            self._conn = imaplib.IMAP4_SSL(self._host, self._port)
         else:
-            self._conn = imaplib.IMAP4(host, port)
+            self._conn = imaplib.IMAP4(self._host, self._port)
 
-        self._conn.login(login, password)
+        self._conn.login(self._login, self._password)
 
         typ, res = self._conn.list()
         if typ != 'OK':
